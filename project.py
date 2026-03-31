@@ -1,18 +1,23 @@
+# quiz_logic
 import wikipedia
-from transformers import pipeline 
-import nltk
+from transformers import pipeline
 import random
-from tabulate import tabulate
-
-nltk.download('punkt')
+import streamlit as st # Import Streamlit for caching decorators
 
 TOPICS = ["Python","Javascript","C","C++","Rust","Java"]
 
-# Pipelines
-ner_pipeline = pipeline("ner", model="dslim/bert-base-NER", aggregation_strategy="simple")
-qg_pipeline = pipeline("text2text-generation", model="valhalla/t5-base-qg-hl")
+# Cache the pipelines so they only load once when the app starts
+@st.cache_resource
+def load_pipelines():
+    ner_pipeline = pipeline("ner", model="dslim/bert-base-NER", aggregation_strategy="simple")
+    qg_pipeline = pipeline("text2text-generation", model="valhalla/t5-base-qg-hl")
+    return ner_pipeline, qg_pipeline
 
-# Fetch Wikipedia page safely
+# Load pipelines once
+ner_pipeline, qg_pipeline = load_pipelines()
+
+# Cache the data fetching to avoid re-downloading on every UI interaction
+@st.cache_data
 def wikipedia_fetch(topic):
     try:
         # Try the programming language page first
@@ -25,7 +30,6 @@ def wikipedia_fetch(topic):
             print(f"⚠️ Couldn't find a page for {topic}: {e}")
             return ""
     except wikipedia.exceptions.DisambiguationError as e:
-        # Pick the option containing "programming"
         for option in e.options:
             if "programming" in option.lower():
                 page = wikipedia.page(option)
@@ -35,16 +39,15 @@ def wikipedia_fetch(topic):
     return page.content
 
 
-# Validate topic
 def get_topic(t):
     topic = t.strip().capitalize()
     if topic in TOPICS:
         return topic
     return "Not valid"
 
-# Generate quiz
+
 def generate_quiz(text, num_questions):
-    sentences = [s.strip() for s in text.split(".") if len(s.split()) >= 6]
+    sentences = [s.strip() for s in text.split(".") if len(s.split()) >= 4]
     if not sentences:
         return []
 
@@ -64,23 +67,12 @@ def generate_quiz(text, num_questions):
 
     quiz = []
 
-    total_needed = num_mcq + num_one_word + num_true_false
+    # Step 2: Dividing the sentences according to type
     random.shuffle(sentences)
 
-    # If not enough sentences, allow reuse by cycling through
-    if len(sentences) < total_needed:
-        extended_sentences = sentences * ((total_needed // len(sentences)) + 1)
-    else:
-        extended_sentences = sentences
-
-    mcq_sentences = extended_sentences[:num_mcq]
-    one_word_sentences = extended_sentences[num_mcq:num_mcq+num_one_word]
-    true_false_sentences = extended_sentences[num_mcq+num_one_word:num_mcq+num_one_word+num_true_false]
-
-
-    # Step 2: Create blank questions
+    # Step 3: Create MCQ questions
     mcq_created = 0
-    for sent in mcq_sentences:
+    for sent in sentences:
         if mcq_created >= num_mcq:
             break
         entities = ner_pipeline(sent)
@@ -112,9 +104,10 @@ def generate_quiz(text, num_questions):
         })
         mcq_created += 1
 
-    # Step 3: Create one-word questions
+    # Step 4: Create one-word questions
+    random.shuffle(sentences)
     one_word_created = 0
-    for sent in one_word_sentences:
+    for sent in sentences:
         if one_word_created >= num_one_word:
             break
         entities = ner_pipeline(sent)
@@ -144,9 +137,10 @@ def generate_quiz(text, num_questions):
         one_word_created += 1
 
 
-    # Step 4: Create true/false questions
+    # Step 5: Create true/false questions
+    random.shuffle(sentences)
     true_false_created = 0
-    for sent in true_false_sentences:
+    for sent in sentences:
         if true_false_created >= num_true_false:
             break
         entities = ner_pipeline(sent)
@@ -171,87 +165,3 @@ def generate_quiz(text, num_questions):
         true_false_created += 1
 
     return quiz
-
-
-# Run quiz interactively
-def run_quiz(quiz):
-    score = 0
-
-    # Separate quiz by type
-    mcq = [q for q in quiz if q['type'] == 'mcq']
-    one_word = [q for q in quiz if q['type'] == 'one_word']
-    true_false = [q for q in quiz if q['type'] == 'true_false']
-
-    print("\n========== MCQ (1 marks each)==========")
-    for i, q in enumerate(mcq):
-        print(f"\nQ{i+1}: {q['question']}")
-        for idx, opt in enumerate(q['options']):
-            print(f"{idx+1}. {opt}")
-        try:
-            ans = int(input("Your answer (option no.): "))
-            if q['options'][ans-1] == q['answer']:
-                print("✅ Correct")
-                score += 1
-            else:
-                print(f"❌ Incorrect! Answer: {q['answer']}")
-        except:
-            print(f"❌ Invalid Input! Answer: {q['answer']}")
-
-    # ----- ONE-WORD -----
-    print("\n========== ONE-WORD QUESTIONS (2 marks each) ==========")
-    for i, q in enumerate(one_word):
-        print(f"\nQ{i+1}: {q['question']}")
-        ans = input("Your answer: ").strip()
-        if ans.lower() == q['answer'].lower():
-            print("✅ Correct")
-            score += 2
-        else:
-            print(f"❌ Incorrect! Answer: {q['answer']}")
-
-    # ----- TRUE/FALSE -----
-    print("\n========== TRUE/FALSE QUESTIONS (1 mark each) ==========")
-    for i, q in enumerate(true_false):
-        print(f"\nQ{i+1}: {q['question']}")
-        ans = input("Your answer (True/False): ").strip().lower()
-        if (ans == "true" and q['answer'] == "True") or (ans == "false" and q['answer'] == "False"):
-            print("✅ Correct")
-            score += 1
-        else:
-            print(f"❌ Incorrect! Answer: {q['answer']}")
-
-    total_marks = len(mcq)*1 + len(one_word)*2 + len(true_false)*1
-    print(f"\n📊 Your Score: {score} / {total_marks}")
-
-
-# Main function
-def main():
-    print("Coding Quiz")
-    print("""
-*******************************************
-Enter your choice of topic from below options
-********************************************
-    """)
-    data = [[topic] for topic in TOPICS]
-    print(tabulate(data, headers=["TOPICS"], tablefmt="fancy_grid"))
-
-    while True:
-        top = input("Topic: ")
-        topic = get_topic(top)
-        if topic != "Not valid":
-            break
-        print("Not a valid option")
-
-    num_questions = int(input("Enter no of questions you want? "))
-    text = wikipedia_fetch(topic)
-    if not text:
-        print("No Wikipedia content found for this topic.")
-        return
-
-    quiz = generate_quiz(text, num_questions)
-    if quiz:
-        run_quiz(quiz)
-    else:
-        print("No quiz could be generated.")
-
-if __name__ == "__main__":
-    main()
