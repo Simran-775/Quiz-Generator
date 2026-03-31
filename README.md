@@ -81,6 +81,4 @@ Quiz-Generator/
 Made with 💙 by [Simranjeet Kaur](https://www.linkedin.com/in/simrandadiala775/)
 
 
-And the **About description:**
-```
-AI-powered quiz generator using BERT NER + T5 Question Generation — Streamlit web app
+
