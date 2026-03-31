@@ -7,7 +7,16 @@ and T5 (Question Generation) — no manual question writing needed!
 Built as a Python project submission for B.Tech CSE AIML at DAVIET, PTU.
 
 ## Screenshots
+### Homepage
 <img width="798" height="424" alt="image" src="https://github.com/user-attachments/assets/b5f2480d-72cd-4f0f-aeee-465ebbf0eed8" />
+### Quiz Generated
+<img width="796" height="423" alt="image" src="https://github.com/user-attachments/assets/30f38b1b-22ad-491b-883f-02c418b94335" />
+<img width="786" height="418" alt="image" src="https://github.com/user-attachments/assets/9444c20b-947d-4991-bf01-725e37c16ac4" />
+<img width="773" height="410" alt="image" src="https://github.com/user-attachments/assets/832d3609-bbf3-4b64-86de-f11ad3187055" />
+<img width="756" height="402" alt="image" src="https://github.com/user-attachments/assets/3d6df586-b78f-4112-8d28-cff8f7ab5559" />
+<img width="765" height="406" alt="image" src="https://github.com/user-attachments/assets/ef530d5b-c2f6-4d6e-9a01-79b48b654b40" />
+### End of Quiz
+<img width="940" height="499" alt="image" src="https://github.com/user-attachments/assets/2fe18be9-c0ae-4665-958e-7691c56bf010" />
 
 <!-- Add a screenshot of the Streamlit app here -->
 
