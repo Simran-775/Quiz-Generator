@@ -7,6 +7,7 @@ and T5 (Question Generation) — no manual question writing needed!
 Built as a Python project submission for B.Tech CSE AIML at DAVIET, PTU.
 
 ## Screenshots
+<img width="798" height="424" alt="image" src="https://github.com/user-attachments/assets/b5f2480d-72cd-4f0f-aeee-465ebbf0eed8" />
 
 <!-- Add a screenshot of the Streamlit app here -->
 
